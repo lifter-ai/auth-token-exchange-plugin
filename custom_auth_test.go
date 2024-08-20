@@ -1,22 +1,22 @@
-package auth_token_exchange_plugin
+package auth_token_exchange_plugin_test
 
 import (
 	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"github.com/mgladysheva/auth-token-exchange-plugin"
+	plugin "github.com/mgladysheva/auth-token-exchange-plugin"
 )
 
 func TestCustomAuth(t *testing.T) {
-	cfg := traefik_custom_auth.CreateConfig()
+	cfg := plugin.CreateConfig()
 	cfg.AuthURL = "https://example.com/verify"
 	cfg.Production = false
 
 	ctx := context.Background()
 	next := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {})
 
-	handler, err := traefik_custom_auth.New(ctx, next, cfg, "custom-auth-plugin")
+	handler, err := plugin.New(ctx, next, cfg, "custom-auth-plugin")
 	if err != nil {
 		t.Fatal(err)
 	}
