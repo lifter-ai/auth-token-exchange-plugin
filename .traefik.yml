@@ -1,6 +1,7 @@
 displayName: Auth Token Exchange Plugin
 
 type: middleware
+iconPath: .assets/icon.png
 
 import: github.com/lifter-ai/auth-token-exchange-plugin
 
