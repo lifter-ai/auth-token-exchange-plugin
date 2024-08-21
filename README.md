@@ -14,7 +14,9 @@ The Auth Token Exchange Plugin is a custom middleware for Traefik that enhances 
 
 ## Installation
 
-To use this plugin with Traefik, you need to declare it in the static configuration. Add the following to your Traefik static configuration:
+To use this plugin with Traefik, you need to declare it in the static configuration. 
+
+Add the following to your Traefik static configuration:
 
 ```yaml
 experimental:
