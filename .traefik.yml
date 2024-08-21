@@ -2,7 +2,7 @@ displayName: Auth Token Exchange Plugin
 
 type: middleware
 
-import: github.com/mgladysheva/auth-token-exchange-plugin
+import: github.com/lifter-ai/auth-token-exchange-plugin
 
 summary: A custom authentication plugin for Traefik that verifies tokens with a configurable users-api service and in case of success exchanges them for an internal token that comes from the response body to pass it downstream for context.
 
