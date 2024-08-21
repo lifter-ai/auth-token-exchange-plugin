@@ -44,8 +44,6 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
         return nil, fmt.Errorf("invalid AuthURL: %v", err)
     }
 
-    rand.Seed(time.Now().UnixNano())
-
     return &CustomAuth{
         next:        next,
         authURL: config.AuthURL,
