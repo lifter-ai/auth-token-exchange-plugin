@@ -129,7 +129,9 @@ func (a *CustomAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
         http.Error(rw, "Failed to process user info", http.StatusInternalServerError)
         return
     }
-    req.Header.Set("X-User-Info", string(userInfoJSON))
+
+    encodedUserInfo := base64.StdEncoding.EncodeToString(userInfoJSON)
+    req.Header.Set("X-User-Info", encodedUserInfo)
 
     // Remove original Authorization header
     req.Header.Del("Authorization")
