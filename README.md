@@ -20,7 +20,7 @@ To use this plugin with Traefik, you need to declare it in the static configurat
 experimental:
   plugins:
     authTokenExchange:
-      moduleName: "github.com/mgladysheva/auth-token-exchange-plugin"
+      moduleName: "github.com/lifter-ai/auth-token-exchange-plugin"
       version: "v0.1.0"
 ```
 

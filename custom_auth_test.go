@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	plugin "github.com/mgladysheva/auth-token-exchange-plugin"
+	plugin "github.com/lifter-ai/auth-token-exchange-plugin"
 )
 
 func TestCustomAuth(t *testing.T) {
