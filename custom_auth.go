@@ -2,21 +2,20 @@ package auth_token_exchange_plugin
 
 import (
     "context"
+    "encoding/base64"
+    "encoding/json"
     "fmt"
     "net/http"
-    "encoding/json"
+    "net/url"
     "strings"
     "time"
-    "net/url"
     "math/rand"
-    "encoding/base64"
-    "github.com/google/uuid"
 )
 
 // Config the plugin configuration.
 type Config struct {
-    AuthURL string `json:"authURL,omitempty"`
-    Production  bool   `json:"production,omitempty"`
+    AuthURL    string `json:"authURL,omitempty"`
+    Production bool   `json:"production,omitempty"`
 }
 
 // CreateConfig creates the default plugin configuration.
@@ -28,10 +27,10 @@ func CreateConfig() *Config {
 
 // CustomAuth a plugin.
 type CustomAuth struct {
-    next        http.Handler
-    authURL string
-    name        string
-    production  bool
+    next       http.Handler
+    authURL    string
+    name       string
+    production bool
 }
 
 // New created a new CustomAuth plugin.
@@ -47,10 +46,10 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
     }
 
     return &CustomAuth{
-        next:        next,
-        authURL: config.AuthURL,
-        name:        name,
-        production:  config.Production,
+        next:       next,
+        authURL:    config.AuthURL,
+        name:       name,
+        production: config.Production,
     }, nil
 }
 
@@ -68,8 +67,8 @@ func (a *CustomAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
         return
     }
 
-    // Generate X-Request-Id
-    requestID := uuid.New().String()
+    // Generate X-Request-Id using UUID v7
+    requestID := NewV7()
     req.Header.Set("X-Request-Id", requestID)
 
     // Real authentication logic

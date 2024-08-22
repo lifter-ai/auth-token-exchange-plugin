@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"testing"
 	plugin "github.com/lifter-ai/auth-token-exchange-plugin"
-	"github.com/google/uuid"
 )
 
 func TestCustomAuth(t *testing.T) {
@@ -17,8 +17,7 @@ func TestCustomAuth(t *testing.T) {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		err := json.NewEncoder(w).Encode(map[string]interface{}{"id": "user123"})
-		if err != nil {
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"id": "user123"}); err != nil {
 			t.Fatalf("Failed to encode response: %v", err)
 		}
 	}))
@@ -39,9 +38,9 @@ func TestCustomAuth(t *testing.T) {
 		if requestID := req.Header.Get("X-Request-Id"); requestID == "" {
 			t.Error("Expected X-Request-Id to be set")
 		} else {
-			_, err := uuid.Parse(requestID)
-			if err != nil {
-				t.Errorf("X-Request-Id is not a valid UUID: %v", err)
+			uuidRegex := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
+			if !uuidRegex.MatchString(requestID) {
+				t.Errorf("X-Request-Id is not a valid UUID v7: %v", requestID)
 			}
 		}
 
