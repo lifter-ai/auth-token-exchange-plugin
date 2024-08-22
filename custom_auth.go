@@ -129,9 +129,9 @@ func (a *CustomAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
     }
 
     // Extract user ID from the JSON response
-    userID, ok := userInfo["id"].(string)
-    if !ok {
-        logError("User ID not found in the response or not a string")
+    userID := fmt.Sprintf("%v", userInfo["id"])
+    if userID == "" {
+        logError("User ID not found in the response or invalid")
         http.Error(rw, "Failed to process user info", http.StatusInternalServerError)
         return
     }

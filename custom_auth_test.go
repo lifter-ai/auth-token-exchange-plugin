@@ -17,7 +17,7 @@ func TestCustomAuth(t *testing.T) {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		if err := json.NewEncoder(w).Encode(map[string]interface{}{"id": "user123"}); err != nil {
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"id": "123"}); err != nil {
 			t.Fatalf("Failed to encode response: %v", err)
 		}
 	}))
@@ -30,8 +30,8 @@ func TestCustomAuth(t *testing.T) {
 	ctx := context.Background()
 	next := http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		// Check X-User-Id header
-		if userID := req.Header.Get("X-User-Id"); userID != "user123" {
-			t.Errorf("Expected X-User-Id to be 'user123', got '%s'", userID)
+		if userID := req.Header.Get("X-User-Id"); userID != "123" {
+			t.Errorf("Expected X-User-Id to be '123', got '%s'", userID)
 		}
 
 		// Check X-Request-Id header
