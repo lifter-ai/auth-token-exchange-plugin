@@ -18,6 +18,10 @@ func TestCustomAuth(t *testing.T) {
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]interface{}{"id": "user123"})
+		err := json.NewEncoder(w).Encode(map[string]interface{}{"id": "user123"})
+		if err != nil {
+			t.Fatalf("Failed to encode response: %v", err)
+		}
 	}))
 	defer authServer.Close()
 
