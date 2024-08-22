@@ -9,6 +9,8 @@ import (
     "time"
     "net/url"
     "math/rand"
+    "encoding/base64"
+    "github.com/google/uuid"
 )
 
 // Config the plugin configuration.
@@ -66,6 +68,10 @@ func (a *CustomAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
         return
     }
 
+    // Generate X-Request-Id
+    requestID := uuid.New().String()
+    req.Header.Set("X-Request-Id", requestID)
+
     // Real authentication logic
     client := &http.Client{Timeout: 10 * time.Second}
     verifyReq, err := http.NewRequest("GET", a.authURL, nil)
@@ -76,7 +82,7 @@ func (a *CustomAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
     }
     verifyReq.Header.Set("Authorization", authHeader)
 
- var resp *http.Response
+    var resp *http.Response
     var retries int
     backoff := 100 * time.Millisecond
     for retries < 3 {
@@ -122,6 +128,17 @@ func (a *CustomAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
         http.Error(rw, "Failed to process user info", http.StatusInternalServerError)
         return
     }
+
+    // Extract user ID from the JSON response
+    userID, ok := userInfo["id"].(string)
+    if !ok {
+        logError("User ID not found in the response or not a string")
+        http.Error(rw, "Failed to process user info", http.StatusInternalServerError)
+        return
+    }
+
+    // Set X-User-Id header
+    req.Header.Set("X-User-Id", userID)
 
     userInfoJSON, err := json.Marshal(userInfo)
     if err != nil {
