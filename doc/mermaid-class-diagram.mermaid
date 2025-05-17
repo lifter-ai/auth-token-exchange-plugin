@@ -1,0 +1,23 @@
+classDiagram
+    class Config {
+        +string AuthURL
+        +bool Production
+        +CreateConfig() *Config
+    }
+    
+    class CustomAuth {
+        +http.Handler next
+        +string authURL
+        +string name
+        +bool production
+        +New(ctx, next, config, name) (http.Handler, error)
+        +ServeHTTP(rw, req) void
+    }
+    
+    class UUIDFunctions {
+        +NewV7() string
+        +makeV7(uuid []byte) void
+        +formatUUID(uuid) string
+    }
+    
+    Config ..> CustomAuth : used by
