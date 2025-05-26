@@ -1,0 +1,13 @@
+flowchart LR
+    Client[External Clients] --> Traefik
+    
+    subgraph Traefik
+        AuthPlugin[Auth Token<br/>Exchange Plugin]
+    end
+    
+    AuthPlugin -->|Verify Token| AuthService[Auth Service]
+    Traefik -->|Forward with X-User-Id| Service1[Internal Service 1]
+    Traefik -->|Forward with X-User-Id| Service2[Internal Service 2]
+    
+    style AuthPlugin fill:#d9edf7,stroke:#333
+    style Traefik fill:#e6f2ff,stroke:#333
