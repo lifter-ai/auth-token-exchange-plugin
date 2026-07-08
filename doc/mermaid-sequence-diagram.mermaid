@@ -13,7 +13,7 @@ sequenceDiagram
     AuthPlugin->>AuthService: 5. Verify token
     AuthService->>AuthPlugin: 6. Return user info
     
-    Note over AuthPlugin: 7. Set X-User-Id, X-User-Info,<br/>X-Request-Id; delete Authorization
+    Note over AuthPlugin: 7. Set X-User-Id, X-Request-Id;<br/>delete Authorization
 
     AuthPlugin->>Traefik: 8. Modified request
     Traefik->>Client: 9. Return response

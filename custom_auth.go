@@ -1,160 +1,149 @@
 package auth_token_exchange_plugin
 
 import (
-    "context"
-    "encoding/base64"
-    "encoding/json"
-    "fmt"
-    "net/http"
-    "net/url"
-    "strings"
-    "time"
-    "math/rand"
+	"context"
+	"encoding/json"
+	"fmt"
+	"math/rand"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
 )
 
 // Config the plugin configuration.
 type Config struct {
-    AuthURL    string `json:"authURL,omitempty"`
-    Production bool   `json:"production,omitempty"`
+	AuthURL    string `json:"authURL,omitempty"`
+	Production bool   `json:"production,omitempty"`
 }
 
 // CreateConfig creates the default plugin configuration.
 func CreateConfig() *Config {
-    return &Config{
-        Production: false,
-    }
+	return &Config{
+		Production: false,
+	}
 }
 
 // CustomAuth a plugin.
 type CustomAuth struct {
-    next       http.Handler
-    authURL    string
-    name       string
-    production bool
+	next       http.Handler
+	authURL    string
+	name       string
+	production bool
 }
 
 // New created a new CustomAuth plugin.
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
-    if config.AuthURL == "" {
-        return nil, fmt.Errorf("AuthURL must be set")
-    }
+	if config.AuthURL == "" {
+		return nil, fmt.Errorf("AuthURL must be set")
+	}
 
-    // Validate URL
-    _, err := url.Parse(config.AuthURL)
-    if err != nil {
-        return nil, fmt.Errorf("invalid AuthURL: %v", err)
-    }
+	// Validate URL
+	_, err := url.Parse(config.AuthURL)
+	if err != nil {
+		return nil, fmt.Errorf("invalid AuthURL: %v", err)
+	}
 
-    return &CustomAuth{
-        next:       next,
-        authURL:    config.AuthURL,
-        name:       name,
-        production: config.Production,
-    }, nil
+	return &CustomAuth{
+		next:       next,
+		authURL:    config.AuthURL,
+		name:       name,
+		production: config.Production,
+	}, nil
 }
 
 func (a *CustomAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-    authHeader := req.Header.Get("Authorization")
-    if authHeader == "" {
-        http.Error(rw, "Missing Authorization header", http.StatusUnauthorized)
-        return
-    }
+	authHeader := req.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(rw, "Missing Authorization header", http.StatusUnauthorized)
+		return
+	}
 
-    // Check for test token
-    if !a.production && strings.TrimPrefix(authHeader, "Bearer ") == "test-token" {
-        // For test token, return 200 OK without forwarding the request
-        rw.WriteHeader(http.StatusOK)
-        return
-    }
+	// Check for test token
+	if !a.production && strings.TrimPrefix(authHeader, "Bearer ") == "test-token" {
+		// For test token, return 200 OK without forwarding the request
+		rw.WriteHeader(http.StatusOK)
+		return
+	}
 
-    // Generate X-Request-Id using UUID v7
-    requestID := NewV7()
-    req.Header.Set("X-Request-Id", requestID)
+	// Generate X-Request-Id using UUID v7
+	requestID := NewV7()
+	req.Header.Set("X-Request-Id", requestID)
 
-    // Real authentication logic
-    client := &http.Client{Timeout: 10 * time.Second}
-    verifyReq, err := http.NewRequest("GET", a.authURL, nil)
-    if err != nil {
-        logError(fmt.Sprintf("Failed to create request: %v", err))
-        http.Error(rw, "Internal server error", http.StatusInternalServerError)
-        return
-    }
-    verifyReq.Header.Set("Authorization", authHeader)
+	// Real authentication logic
+	client := &http.Client{Timeout: 10 * time.Second}
+	verifyReq, err := http.NewRequest("GET", a.authURL, nil)
+	if err != nil {
+		logError(fmt.Sprintf("Failed to create request: %v", err))
+		http.Error(rw, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	verifyReq.Header.Set("Authorization", authHeader)
 
-    var resp *http.Response
-    var retries int
-    backoff := 100 * time.Millisecond
-    for retries < 3 {
-        resp, err = client.Do(verifyReq)
-        if err == nil {
-            break
-        }
-        retries++
-        
-        // Calculate jitter
-        jitter := time.Duration(rand.Int63n(int64(backoff)))
-        sleepTime := backoff + jitter
-        
-        logError(fmt.Sprintf("Request failed (attempt %d): %v. Retrying in %v", retries, err, sleepTime))
-        
-        time.Sleep(sleepTime)
-        
-        // Exponential backoff
-        backoff *= 2
-    }
+	var resp *http.Response
+	var retries int
+	backoff := 100 * time.Millisecond
+	for retries < 3 {
+		resp, err = client.Do(verifyReq)
+		if err == nil {
+			break
+		}
+		retries++
 
-    if err != nil {
-        logError(fmt.Sprintf("Failed to reach users-api after %d retries: %v", retries, err))
-        http.Error(rw, "Failed to reach users-api", http.StatusInternalServerError)
-        return
-    }
-    defer resp.Body.Close()
+		// Calculate jitter
+		jitter := time.Duration(rand.Int63n(int64(backoff)))
+		sleepTime := backoff + jitter
 
-    if resp.StatusCode == http.StatusUnauthorized {
-        http.Error(rw, "Invalid token", http.StatusUnauthorized)
-        return
-    }
+		logError(fmt.Sprintf("Request failed (attempt %d): %v. Retrying in %v", retries, err, sleepTime))
 
-    if resp.StatusCode != http.StatusOK {
-        logError(fmt.Sprintf("Unexpected response from users-api: %d", resp.StatusCode))
-        http.Error(rw, "Unexpected response from users-api", resp.StatusCode)
-        return
-    }
+		time.Sleep(sleepTime)
 
-    var userInfo map[string]interface{}
-    if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
-        logError(fmt.Sprintf("Failed to decode user info: %v", err))
-        http.Error(rw, "Failed to process user info", http.StatusInternalServerError)
-        return
-    }
+		// Exponential backoff
+		backoff *= 2
+	}
 
-    // Extract user ID from the JSON response
-    userID := fmt.Sprintf("%v", userInfo["id"])
-    if userID == "" {
-        logError("User ID not found in the response or invalid")
-        http.Error(rw, "Failed to process user info", http.StatusInternalServerError)
-        return
-    }
+	if err != nil {
+		logError(fmt.Sprintf("Failed to reach users-api after %d retries: %v", retries, err))
+		http.Error(rw, "Failed to reach users-api", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
 
-    // Set X-User-Id header
-    req.Header.Set("X-User-Id", userID)
+	if resp.StatusCode == http.StatusUnauthorized {
+		http.Error(rw, "Invalid token", http.StatusUnauthorized)
+		return
+	}
 
-    userInfoJSON, err := json.Marshal(userInfo)
-    if err != nil {
-        logError(fmt.Sprintf("Failed to marshal user info: %v", err))
-        http.Error(rw, "Failed to process user info", http.StatusInternalServerError)
-        return
-    }
+	if resp.StatusCode != http.StatusOK {
+		logError(fmt.Sprintf("Unexpected response from users-api: %d", resp.StatusCode))
+		http.Error(rw, "Unexpected response from users-api", resp.StatusCode)
+		return
+	}
 
-    encodedUserInfo := base64.StdEncoding.EncodeToString(userInfoJSON)
-    req.Header.Set("X-User-Info", encodedUserInfo)
+	var userInfo map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
+		logError(fmt.Sprintf("Failed to decode user info: %v", err))
+		http.Error(rw, "Failed to process user info", http.StatusInternalServerError)
+		return
+	}
 
-    // Remove original Authorization header
-    req.Header.Del("Authorization")
+	// Extract user ID from the JSON response
+	userID := fmt.Sprintf("%v", userInfo["id"])
+	if userID == "" {
+		logError("User ID not found in the response or invalid")
+		http.Error(rw, "Failed to process user info", http.StatusInternalServerError)
+		return
+	}
 
-    a.next.ServeHTTP(rw, req)
+	// Set X-User-Id header
+	req.Header.Set("X-User-Id", userID)
+
+	// Remove original Authorization header
+	req.Header.Del("Authorization")
+
+	a.next.ServeHTTP(rw, req)
 }
 
 func logError(msg string) {
-    fmt.Printf("CustomAuth plugin error: %s\n", msg)
+	fmt.Printf("CustomAuth plugin error: %s\n", msg)
 }

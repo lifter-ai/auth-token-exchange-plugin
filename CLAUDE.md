@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A [Traefik](https://traefik.io) **middleware plugin** (Go) that intercepts requests, verifies the `Authorization` bearer token against an external auth service, and — on success — strips the token and forwards user context to downstream services via headers.
 
-**Source of truth is the code, not the docs.** `.traefik.yml` and `doc/*.mermaid` can lag behind `custom_auth.go`. The code sets an `X-User-Info` header — base64 of the **entire** auth-service response body — documented in `README.md` and [doc/consumers.md](doc/consumers.md). Caveat: in the Duos deployment `authURL` targets `/api/v1/users/current/id`, whose body is just `{"id":N}`, so `X-User-Info` carries only the id there — not a full user object. When code and docs disagree, trust `custom_auth.go`.
+**Source of truth is the code, not the docs.** `.traefik.yml` and `doc/*.mermaid` can lag behind `custom_auth.go`. The plugin sets `X-User-Id` (the `id` from the auth-service response) and `X-Request-Id`, and deletes the incoming `Authorization` header — see [doc/consumers.md](doc/consumers.md) for how it's wired into the Duos stack. (History: an `X-User-Info` header — base64 of the full response body — was removed; downstream `core` now resolves the user from the id via the DB.) When code and docs disagree, trust `custom_auth.go`.
 
 ## Commands
 
@@ -50,14 +50,15 @@ otherwise:
     resp 401 ─────────────────────────────────────────► 401 "Invalid token"
     resp non-200 ─────────────────────────────────────► passthrough that status
     resp 200 → decode JSON body:
-      set X-User-Id   = body["id"]
-      set X-User-Info = base64(entire body JSON)
+      set X-User-Id = body["id"]
       DELETE Authorization header
       forward to next handler
 ```
 
-The "token exchange" *is* those forwarded headers — downstream services read `X-User-Id` / `X-User-Info` for user context and never see the original credential. `production=false` enables the `test-token` shortcut; set `production=true` in real deployments.
+The "token exchange" *is* those forwarded headers — downstream services read `X-User-Id` for user context and never see the original credential. `production=false` enables the `test-token` shortcut; set `production=true` in real deployments.
 
 ## Releasing
 
 Consumers pin a **git tag** (e.g. `v0.1.5` in the README examples). Releasing is tagging a commit — there is no build artifact. CI (`.github/workflows/main.yml`) runs in a GOPATH layout and enforces `git diff --exit-code go.mod` after `go mod tidy`, so keep `go.mod` tidy or the build fails.
+
+Full bump-and-deploy runbook (prod + beta): [doc/releasing.md](doc/releasing.md).
