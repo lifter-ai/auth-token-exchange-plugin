@@ -2,14 +2,13 @@ package auth_token_exchange_plugin
 
 import (
     "context"
-    "encoding/base64"
     "encoding/json"
     "fmt"
+    "math/rand"
     "net/http"
     "net/url"
     "strings"
     "time"
-    "math/rand"
 )
 
 // Config the plugin configuration.
@@ -90,15 +89,15 @@ func (a *CustomAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
             break
         }
         retries++
-        
+
         // Calculate jitter
         jitter := time.Duration(rand.Int63n(int64(backoff)))
         sleepTime := backoff + jitter
-        
+
         logError(fmt.Sprintf("Request failed (attempt %d): %v. Retrying in %v", retries, err, sleepTime))
-        
+
         time.Sleep(sleepTime)
-        
+
         // Exponential backoff
         backoff *= 2
     }
@@ -138,16 +137,6 @@ func (a *CustomAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
     // Set X-User-Id header
     req.Header.Set("X-User-Id", userID)
-
-    userInfoJSON, err := json.Marshal(userInfo)
-    if err != nil {
-        logError(fmt.Sprintf("Failed to marshal user info: %v", err))
-        http.Error(rw, "Failed to process user info", http.StatusInternalServerError)
-        return
-    }
-
-    encodedUserInfo := base64.StdEncoding.EncodeToString(userInfoJSON)
-    req.Header.Set("X-User-Info", encodedUserInfo)
 
     // Remove original Authorization header
     req.Header.Del("Authorization")
