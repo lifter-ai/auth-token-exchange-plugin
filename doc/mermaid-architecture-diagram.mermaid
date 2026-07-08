@@ -6,8 +6,8 @@ flowchart LR
     end
     
     AuthPlugin -->|Verify Token| AuthService[Auth Service]
-    Traefik -->|Forward with X-User-Id| Service1[Internal Service 1]
-    Traefik -->|Forward with X-User-Id| Service2[Internal Service 2]
+    Traefik -->|Forward with X-User-Id + X-User-Info| Service1[Internal Service 1]
+    Traefik -->|Forward with X-User-Id + X-User-Info| Service2[Internal Service 2]
     
     style AuthPlugin fill:#d9edf7,stroke:#333
     style Traefik fill:#e6f2ff,stroke:#333

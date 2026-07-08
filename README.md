@@ -11,7 +11,7 @@ The Auth Token Exchange Plugin is a custom middleware for Traefik that enhances 
 - Configurable production mode
 - Built-in test token support for easy integration testing
 - Retry mechanism with jitter for improved reliability
-- Adds `X-User-Id` and `X-Request-Id` headers to authenticated requests
+- Adds `X-User-Id`, `X-User-Info`, and `X-Request-Id` headers to authenticated requests, and strips the incoming `Authorization` header
 
 ## Installation
 
@@ -91,12 +91,15 @@ Remember to replace `your_namespace`, `your_service`, and `your_service_port` wi
 
 ## Headers
 
-The plugin adds the following headers to authenticated requests:
+On a successful (200) verification the plugin adds these headers to the forwarded request:
 
-- `X-User-Id`: Contains the user ID extracted from the authentication service response
-- `X-Request-Id`: Contains a unique UUID generated for each request
+- `X-User-Id`: the `id` field extracted from the authentication-service response body
+- `X-User-Info`: base64-encoded JSON of the **entire** authentication-service response body
+- `X-Request-Id`: a unique UUID (v7) generated per request
 
-These headers can be used by downstream services to identify the user and track requests across your system.
+It also **deletes** the incoming `Authorization` header, so downstream services never see the original credential.
+
+These headers let downstream services identify the user and trace requests. For how the plugin is wired into a real deployment — and exactly which services receive `X-User-Info` — see [doc/consumers.md](doc/consumers.md).
 
 ## Development
 
