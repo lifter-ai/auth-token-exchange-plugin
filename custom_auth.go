@@ -54,11 +54,20 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 
 func (a *CustomAuth) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
     authHeader := req.Header.Get("Authorization")
+    // Check subprotocol header for ws connections
+    if authHeader == "" {
+        if subproto := req.Header.Get("Sec-WebSocket-Protocol"); subproto != "" {
+            parts := strings.SplitN(subproto, ",", 2)
+            if len(parts) == 2 {
+                authHeader = strings.TrimSpace(parts[0]) + " " + strings.TrimSpace(parts[1])
+            }
+        }
+    }
+
     if authHeader == "" {
         http.Error(rw, "Missing Authorization header", http.StatusUnauthorized)
         return
     }
-
     // Check for test token
     if !a.production && strings.TrimPrefix(authHeader, "Bearer ") == "test-token" {
         // For test token, return 200 OK without forwarding the request
